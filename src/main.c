@@ -10,7 +10,6 @@
 #define MAX_NUMBER_OF_TS_PACKET 8
 
 static int rx_buffer_index = 0;
-static int frame_ts_packet_index = 0;
 static bool reorder_needed = false;
 
 void do_on_ts_reception(TsPacket ts_packet, TsPacket *rx_buffer)
@@ -55,6 +54,9 @@ void do_on_ts_reception(TsPacket ts_packet, TsPacket *rx_buffer)
 
         // send frame
         printf("do_on_ts_reception - [pid: 0x%04X] - Frame can be sent!\n", rx_buffer[rx_buffer_index].pid);
+        rx_buffer_index = 0;
+        reorder_needed = false;
+        return;
     }
 
     rx_buffer_index++;
@@ -65,11 +67,12 @@ int main()
     TsPacket input_ts_packets[255];
     unsigned char input_packet_number = generate_frames(input_ts_packets);
 
-    TsPacket rx_buffer[MAX_NUMBER_OF_TS_PACKET];
+    TsPacket rx_buffer[PID_RANGE][MAX_NUMBER_OF_TS_PACKET];
     int i;
     for (i = 0; i < input_packet_number; i++)
     {
-        do_on_ts_reception(input_ts_packets[i], rx_buffer);
+        int frame_count = input_ts_packets[i].pid - ASMAN_PID;
+        do_on_ts_reception(input_ts_packets[i], rx_buffer[frame_count]);
         usleep(500000);
     }
 

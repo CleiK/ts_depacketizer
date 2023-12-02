@@ -3,7 +3,9 @@
 unsigned int generate_frames(TsPacket *ts_packets)
 {
     unsigned int total_ts_packets = 0;
-    total_ts_packets += generate_frame(ts_packets, Shuffled);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled);
 
     return total_ts_packets;
 }
