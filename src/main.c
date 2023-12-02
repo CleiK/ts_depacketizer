@@ -10,6 +10,7 @@
 #define MAX_NUMBER_OF_TS_PACKET 8
 
 static int rx_buffer_index = 0;
+static int frame_ts_packet_index = 0;
 static bool reorder_needed = false;
 
 void do_on_ts_reception(TsPacket ts_packet, TsPacket *rx_buffer)
@@ -27,7 +28,12 @@ void do_on_ts_reception(TsPacket ts_packet, TsPacket *rx_buffer)
         reorder_needed = true;
 
     ts_packet_header_string(&rx_buffer[rx_buffer_index], buffer);
-    printf("   do_on_ts_reception - seq: %d - %s\n", rx_buffer[rx_buffer_index].seq, buffer);
+    printf("do_on_ts_reception - [pid: 0x%04X] - seq: %d - %s\n", rx_buffer[rx_buffer_index].pid, rx_buffer[rx_buffer_index].seq, buffer);
+
+    // // Some packets are missing
+    // if (rx_buffer_index + 1 < ts_packet.expected_number_of_packets)
+    // {
+    // }
 
     // if rx_buffer is complete
     if (rx_buffer_index + 1 == ts_packet.expected_number_of_packets)
@@ -35,19 +41,20 @@ void do_on_ts_reception(TsPacket ts_packet, TsPacket *rx_buffer)
         // reorder if needed
         if (reorder_needed)
         {
-            printf("Reordering..\n");
+            printf("do_on_ts_reception - [pid: 0x%04X] - Reordering..\n", rx_buffer[rx_buffer_index].pid);
             qsort(rx_buffer, ts_packet.expected_number_of_packets, sizeof(TsPacket), ts_packet_compare);
         }
 
-        // send frame
-        printf("Frame can be sent!\n");
-
+        // show
         for (i = 0; i < ts_packet.expected_number_of_packets; i++)
         {
             char buffer[30] = {0};
             ts_packet_header_string(&rx_buffer[i], buffer);
-            printf("   [Index %d] Seq: %d - %s\n", i, rx_buffer[i].seq, buffer);
+            printf("   [pid: 0x%04X] Index: %d - Seq: %d - %s\n", rx_buffer[rx_buffer_index].pid, i, rx_buffer[i].seq, buffer);
         }
+
+        // send frame
+        printf("do_on_ts_reception - [pid: 0x%04X] - Frame can be sent!\n", rx_buffer[rx_buffer_index].pid);
     }
 
     rx_buffer_index++;
