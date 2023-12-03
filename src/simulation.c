@@ -1,18 +1,29 @@
 #include "simulation.h"
 
-unsigned int generate_frames(TsPacket *ts_packets)
+unsigned int generate_frames(TsPacket ts_packets[])
 {
     unsigned int total_ts_packets = 0;
-    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled);
-    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled);
-    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled);
+    // total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
+    // total_ts_packets += generate_frame(ts_packets + total_ts_packets, IncompleteAtStart);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
+    // total_ts_packets += generate_frame(ts_packets + total_ts_packets, IncompleteAtMid);
+    // total_ts_packets += generate_frame(ts_packets + total_ts_packets, IncompleteAtEnd);
+    // total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled + IncompleteAtStart);
+    // total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled + IncompleteAtMid);
+    // total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled + IncompleteAtEnd);
 
     return total_ts_packets;
 }
 
 static unsigned char frame_count = 0;
 
-static unsigned char generate_frame(TsPacket *ts_packets, SimulatedFrameStyle style)
+static unsigned char generate_frame(TsPacket ts_packets[], SimulatedFrameStyle style)
 {
     const unsigned char number_of_ts_packets = ceil((double)FRAME_LEN / (double)TS_PACKET_DATA_LENGTH);
 
@@ -42,25 +53,39 @@ static unsigned char generate_frame(TsPacket *ts_packets, SimulatedFrameStyle st
     }
 
     // Create all TsPacket structs from buffers
-
+    int created_packets_count = 0;
     for (i = 0; i < number_of_ts_packets; i++)
-        ts_packet_from_buffer(&ts_packets[i], inputs[i]);
+    {
+        if (has_style(style, IncompleteAtStart) && i == 0)
+            continue;
 
-    if (style == Shuffled)
+        if (has_style(style, IncompleteAtMid) && i == number_of_ts_packets / 2)
+            continue;
+
+        if (has_style(style, IncompleteAtEnd) && i == (number_of_ts_packets - 1))
+            continue;
+
+        ts_packet_from_buffer(&ts_packets[i], inputs[i]);
+        created_packets_count++;
+    }
+
+    if (has_style(style, Shuffled))
         shuffle(ts_packets, number_of_ts_packets);
 
-    printf("generate_frame - [pid: 0x%04X] - Generated a frame with %d ts packets\n", pid, number_of_ts_packets);
+    char style_string[255] = {0};
+    frame_style_string(style, style_string);
+    printf("generate_frame - [pid: 0x%04X] - Generated a frame with %d ts packets and style %s\n", pid, created_packets_count, style_string);
 
     for (i = 0; i < number_of_ts_packets; i++)
     {
         char buffer[30] = {0};
         ts_packet_header_string(&ts_packets[i], buffer);
-        printf("   [pid: 0x%04X] Index: %d - Seq: %d - %s\n", pid, i, ts_packets[i].seq, buffer);
+        printf("   [pid: 0x%04X] Index: %d - Seq: %d - %s\n", ts_packets[i].pid, i, ts_packets[i].seq, buffer);
     }
 
     frame_count++;
 
-    return number_of_ts_packets;
+    return created_packets_count;
 }
 
 static void swap(TsPacket *a, TsPacket *b)
@@ -84,4 +109,34 @@ static void shuffle(TsPacket arr[], int n)
         // Swap arr[i] with the element at random index
         swap(&arr[i], &arr[j]);
     }
+}
+
+static bool has_style(SimulatedFrameStyle value, SimulatedFrameStyle flag)
+{
+    return (value & flag) == flag;
+}
+
+static void frame_style_string(SimulatedFrameStyle value, char *buffer)
+{
+    if (buffer == NULL)
+        return;
+
+    strcat(buffer, "[");
+
+    if (has_style(value, Shuffled))
+        strcat(buffer, "Shuffled ");
+    else
+        strcat(buffer, "Ordered ");
+
+    if (has_style(value, IncompleteAtStart))
+        strcat(buffer, "IncompleteAtStart ");
+
+    if (has_style(value, IncompleteAtMid))
+        strcat(buffer, "IncompleteAtMid ");
+
+    if (has_style(value, IncompleteAtEnd))
+        strcat(buffer, "IncompleteAtEnd ");
+
+    buffer[strlen(buffer) - 1] = ']';
+    buffer[strlen(buffer)] = '\0';
 }
