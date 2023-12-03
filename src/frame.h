@@ -13,7 +13,7 @@ typedef enum
 
 typedef struct
 {
-    // PID number (PID - ASMAN_PID)
+    // PID number (PID - BASE_PID)
     unsigned char pid_count;
     // Number of TS packets received since the last time we got a packet for this frame
     unsigned char lateness_count;

@@ -3,20 +3,16 @@
 unsigned int generate_frames(TsPacket ts_packets[])
 {
     unsigned int total_ts_packets = 0;
-    // total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled);
     total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
     // total_ts_packets += generate_frame(ts_packets + total_ts_packets, IncompleteAtStart);
-    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
-    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
-    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
-    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
-    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
-    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
     // total_ts_packets += generate_frame(ts_packets + total_ts_packets, IncompleteAtMid);
-    // total_ts_packets += generate_frame(ts_packets + total_ts_packets, IncompleteAtEnd);
-    // total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled + IncompleteAtStart);
-    // total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled + IncompleteAtMid);
-    // total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled + IncompleteAtEnd);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled + IncompleteAtStart);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled + IncompleteAtMid);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled + IncompleteAtEnd);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Shuffled);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
+    total_ts_packets += generate_frame(ts_packets + total_ts_packets, Ordered);
 
     return total_ts_packets;
 }
@@ -30,7 +26,7 @@ static unsigned char generate_frame(TsPacket ts_packets[], SimulatedFrameStyle s
     unsigned char inputs[number_of_ts_packets][TS_PACKET_LENGTH];
     memset(inputs, 0, number_of_ts_packets * TS_PACKET_LENGTH * sizeof(unsigned char));
 
-    unsigned int pid = ASMAN_PID + frame_count;
+    unsigned int pid = BASE_PID + frame_count;
 
     int i = 0, j = 0, seq = 0;
     for (i = 0; i < number_of_ts_packets; i++)
@@ -53,34 +49,50 @@ static unsigned char generate_frame(TsPacket ts_packets[], SimulatedFrameStyle s
     }
 
     // Create all TsPacket structs from buffers
-    int created_packets_count = 0;
+    unsigned char created_packets_count = 0;
+    bool skipped = false;
     for (i = 0; i < number_of_ts_packets; i++)
     {
+
         if (has_style(style, IncompleteAtStart) && i == 0)
+        {
+            skipped = true;
             continue;
+        }
 
         if (has_style(style, IncompleteAtMid) && i == number_of_ts_packets / 2)
+        {
+            skipped = true;
             continue;
+        }
 
         if (has_style(style, IncompleteAtEnd) && i == (number_of_ts_packets - 1))
+        {
+            skipped = true;
             continue;
+        }
 
-        ts_packet_from_buffer(&ts_packets[i], inputs[i]);
+        unsigned char index = skipped ? i - 1 : i;
+
+        ts_packet_from_buffer(&ts_packets[index], inputs[i]);
         created_packets_count++;
     }
 
     if (has_style(style, Shuffled))
-        shuffle(ts_packets, number_of_ts_packets);
+        shuffle(ts_packets, created_packets_count);
 
     char style_string[255] = {0};
     frame_style_string(style, style_string);
     printf("generate_frame - [pid: 0x%04X] - Generated a frame with %d ts packets and style %s\n", pid, created_packets_count, style_string);
 
-    for (i = 0; i < number_of_ts_packets; i++)
+    if (DEBUG)
     {
-        char buffer[30] = {0};
-        ts_packet_header_string(&ts_packets[i], buffer);
-        printf("   [pid: 0x%04X] Index: %d - Seq: %d - %s\n", ts_packets[i].pid, i, ts_packets[i].seq, buffer);
+        for (i = 0; i < created_packets_count; i++)
+        {
+            char buffer[30] = {0};
+            ts_packet_header_string(&ts_packets[i], buffer);
+            printf("   [pid: 0x%04X] Index: %d - Seq: %d - %s\n", ts_packets[i].pid, i, ts_packets[i].seq, buffer);
+        }
     }
 
     frame_count++;

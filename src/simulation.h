@@ -6,9 +6,10 @@
 #include <time.h>
 #include <limits.h>
 
+#include "common.h"
 #include "tspacket.h"
 
-#define ASMAN_PID 0x11aa
+#define BASE_PID 0x11aa
 #define PID_RANGE UCHAR_MAX
 #define THIRD_BYTE_BASE_VALUE 0x10
 #define FRAME_LEN 900
