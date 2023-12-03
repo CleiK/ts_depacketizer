@@ -86,16 +86,10 @@ int main()
     // Simulate the reception of packets
     for (packet_index = 0; packet_index < input_packet_number; packet_index++)
     {
-        int frame_count = 0;
+        int frame_count = frame_count = input_ts_packets[packet_index].pid - BASE_PID;
 
-        // Skip the packets removed from the frame during the simulation
-        if (input_ts_packets[packet_index].pid != 0)
-        {
-            frame_count = input_ts_packets[packet_index].pid - BASE_PID;
-
-            do_on_ts_reception(input_ts_packets[packet_index]);
-            usleep(50000);
-        }
+        do_on_ts_reception(input_ts_packets[packet_index]);
+        usleep(50000);
 
         // Iterate on incomplete frames except the current one
         for (pid_index = 0; pid_index < PID_RANGE; pid_index++)
